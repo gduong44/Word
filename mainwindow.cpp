@@ -14,7 +14,11 @@ MainWindow::MainWindow(QWidget *parent) :
     createToolBars();
     createStatusBar();
 
+    findDialog = 0;
+
     connect (doc, SIGNAL(textChanged()), this , SLOT(isModified()));
+    // Move cursor to beginning of document when find dialog pops up
+    connect (findAction, SIGNAL(triggered()), doc, SLOT(setCursorTop()));
 }
 
 MainWindow::~MainWindow()
@@ -28,7 +32,7 @@ void MainWindow::createActions()
     newAction->setIcon(QIcon(":/images/new.png"));
     newAction->setShortcut(QKeySequence::New);
     newAction->setStatusTip(tr("Create a new document file"));
-   // connect(newAction, SIGNAL(triggered()), this, SLOT(newFile()));
+    connect(newAction, SIGNAL(triggered()), this, SLOT(newFile()));
 
     openAction = new QAction(tr("&Open"),this);
     openAction->setIcon(QIcon(":/images/open.png"));
@@ -37,13 +41,13 @@ void MainWindow::createActions()
     connect(openAction, SIGNAL(triggered()), this, SLOT(open()));
 
     saveAction = new QAction(tr("&Save"),this);
-    saveAction->setIcon(QIcon(":/image/save.png"));
+    saveAction->setIcon(QIcon(":/images/save.png"));
     saveAction->setShortcut(QKeySequence::Save);
-    //connect(saveAction, SIGNAL(triggered(), this , SLOT(Save())))
+    connect(saveAction, SIGNAL(triggered()), this , SLOT(save()));
 
     saveAsAction = new QAction(tr("Save &As"),this);
     saveAsAction->setShortcut(QKeySequence::SaveAs);
-  // connect(saveAsAction, SIGNAL(triggered()), this, SLOT(saveAs()))
+    connect(saveAsAction, SIGNAL(triggered()), this, SLOT(saveAs()));
 
     exitAction = new QAction(tr("E&xit"),this);
     exitAction->setShortcut(QKeySequence::Quit);
@@ -53,32 +57,35 @@ void MainWindow::createActions()
     cutAction = new QAction(tr("Cut"), this);
     cutAction->setShortcut(QKeySequence::Cut);
     cutAction->setStatusTip(tr("Remove text to clipboard"));
-    //connect(cutAction, SIGNAL(triggered()), this, SLOT(cut))
+    cutAction->setIcon(QIcon(":/images/cut.png"));
+    connect(cutAction, SIGNAL(triggered()), doc, SLOT(cut()));
 
     copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence::Copy);
+    copyAction->setIcon(QIcon(":/images/copy.png"));
     copyAction->setToolTip(tr("Copy text to clip board"));
-    //connect(copyAction, SIGNAL(triggered()), this, SLOT(copy());
+    connect(copyAction, SIGNAL(triggered()), doc, SLOT(copy()));
 
     pasteAction = new QAction(tr("Paste"), this);
     pasteAction->setShortcut(QKeySequence::Paste);
+    pasteAction->setIcon(QIcon(":/images/paste.png"));
     pasteAction->setToolTip(tr("Paste text from clipboard"));
-    //connect(pasteAction, SIGNAL(triggered()), this, SLOT(Paste()));
+    connect(pasteAction, SIGNAL(triggered()), doc, SLOT(paste()));
 
     deleteAction = new QAction(tr("Delete"), this);
     deleteAction->setShortcut(QKeySequence::Delete);
     deleteAction->setToolTip(tr("delete the following text"));
-    //connect(deleteAction, SIGNAL(triggered()), this, SIGNAL(del()));
+    connect(deleteAction, SIGNAL(triggered()), doc, SLOT(del()));
 
     selectAllAction = new QAction(tr("Select ALL"), this);
     selectAllAction->setShortcut(QKeySequence::SelectAll);
     selectAllAction->setToolTip(tr("Select all"));
-    //connect(selectAllAction, SIGNAL(triggered()), this, SLOT(selectAll()))
+    connect(selectAllAction, SIGNAL(triggered()), doc, SLOT(selectAll()));
 
     findAction = new QAction(tr("Find"), this);
     findAction->setShortcut(QKeySequence::Find);
     findAction->setToolTip(tr("Find text"));
-    //connect (findAction,SIGNAL(triggered()), this, SLOT(find()) );
+    connect (findAction,SIGNAL(triggered()), this, SLOT(find()) );
 
     fontAction = new QAction(tr("Font"), this);
     fontAction->setToolTip(tr("Font selection"));
@@ -90,7 +97,7 @@ void MainWindow::createActions()
 
     aboutQTAction = new QAction(tr("About &Qt"), this);
     aboutQTAction->setStatusTip(tr("show the QT library's about box"));
-    //connect (aboutQTAction, SIGNAL(triggered()), qAPP, SLOT(aboutQT));
+ //   connect (aboutQTAction, SIGNAL(triggered()), qAPP, SLOT(aboutQT));
 }
 
 void MainWindow::createMenus()
@@ -170,7 +177,7 @@ bool MainWindow::okToContinue()
                                     QMessageBox::Yes| QMessageBox::No
                                     |QMessageBox::Cancel);
        if (r == QMessageBox::Yes){
-  //         return save();
+           return save();
        }else if (r == QMessageBox::Cancel){
            return false;
        }
@@ -200,22 +207,59 @@ bool MainWindow::loadFile(const QString &fileName)
         return false;
     }
 
-    QTextStream readFile(&file);
-    doc->setText(readFile.readAll());
+    doc->readFile(fileName);
     return true;
 }
 
 bool MainWindow::save()
 {
-    if(currentFile.isEmpty())
-    {
 
+    if(fileName.isEmpty()){
+        return saveAs();
+    } else {
+        return saveFile(fileName);
     }
 }
 
-void MainWindow::setCurrentFile()
+bool MainWindow::saveAs()
+{
+    QString fileName = QFileDialog::getSaveFileName(this,
+                                                    tr("Save Word"),
+                                                    ".",
+                                                    tr("Word Files (*.txt)"));
+    if(fileName.isEmpty())
+        return false;
+
+    return saveFile(fileName);
+}
+
+bool MainWindow::saveFile(const QString &fileName)
 {
 
+    if(!doc->writeFile(fileName)){
+       statusBar()->showMessage(tr("Saving canceled"), 2000);
+        return false;
+    }
+
+
+    setCurrentFile(fileName);
+    statusBar()->showMessage(tr("File Saved"), 2000);
+    modified = false;
+    return true;
+}
+
+void MainWindow::setCurrentFile(const QString &fileName)
+{
+    currentFile = fileName;
+}
+
+void MainWindow::find()
+{
+    if(!findDialog){
+       findDialog = new FindDialog;
+       connect(findDialog, SIGNAL(findNext(QString &)), doc, SLOT(findNext(QString &)));
+    }
+    findDialog->show();
 }
 
 
