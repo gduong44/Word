@@ -13,6 +13,9 @@
 #include <QFile>
 #include <QTextStream>
 #include <QString>
+#include <QTextCursor>
+#include <QDialog>
+#include "finddialog.h"
 
 namespace Ui {
 class MainWindow;
@@ -29,16 +32,19 @@ public:
 private:
     bool modified;
     QString currentFile;
-    void setCurrentFile();
+    QString fileName;
+
+    void setCurrentFile(QString &fileName);
 
     void createActions();
     void createMenus();
     void createToolBars();
     void createStatusBar();
-    void newFile();
+
     bool okToContinue();
     bool loadFile(const QString&);
-
+    bool saveFile(const QString &);
+    void setCurrentFile(const QString &);
     Document *doc;
 
     QAction *newAction;
@@ -67,18 +73,20 @@ private:
 
     QLabel *locationLabel;
 
+    FindDialog *findDialog;
     Ui::MainWindow *ui;
 private slots:
-    //void newFile();
+    void newFile();
     void open();
-  //  void save();
-    //void saveAs();
+    bool save();
+    bool saveAs();
     //void cut();
     //void copy();
     //void paste();
-    //void del();
+
     //void selectAll();
-    //void find();
+    void find();
+
     //void font();
     //void about();
     void isModified();
